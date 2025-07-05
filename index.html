@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Distraction Logger App</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+
+    <h1>Distraction Logger App</h1>
+
+    <button id="toggle-theme">Toggle Dark Mode</button>
+
+    <section class="distraction-section" style="margin-top: 2rem;">
+        <button id="log-distraction">Got Distracted</button>
+        <input id="distraction-reason" type="text" placeholder="Why?" autocomplete="off" />
+        <button id="export-json">Export JSON</button>
+        <button id="export-txt">Export TXT</button>
+    </section>
+
+    <section id="stats" style="margin-top: 2rem;">
+        <h2>Today's Stats</h2>
+        <p id="focus-total">Total Focus Time: 0 mins</p>
+        <p id="distraction-count">Distractions: 0</p>
+        <ul id="distraction-log"></ul>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
