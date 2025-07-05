@@ -193,3 +193,44 @@ distractionReasonInput.addEventListener('keydown', (e) => {
         logDistractionBtn.click();
     }
 });
+
+const exportJsonBtn = document.getElementById('export-json-button');
+const exportTxtBtn = document.getElementById('export-txt-button');
+
+
+function download(filename, content, type = 'text/plain') {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportDistractionsJSON() {
+    if (distractions.length === 0) {
+        alert("No distractions to export!");
+        return;
+    }
+    const jsonStr = JSON.stringify(distractions, null, 2);
+    download('distractions.json', jsonStr, 'application/json');
+}
+
+function exportDistractionsTXT() {
+    if (distractions.length === 0) {
+        alert("No distractions to export!");
+        return;
+    }
+    // Format as timestamp - reason lines
+    const lines = distractions.map(({ reason, timestamp }) => {
+        const timeStr = new Date(timestamp).toLocaleString();
+        return `[${timeStr}] ${reason || 'No reason given'}`;
+    });
+    const txtContent = lines.join('\n');
+    download('distractions.txt', txtContent, 'text/plain');
+}
+
+// Add event listeners for export buttons
+exportJsonBtn.addEventListener('click', exportDistractionsJSON);
+exportTxtBtn.addEventListener('click', exportDistractionsTXT);
