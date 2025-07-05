@@ -1,142 +1,195 @@
-// ===== Dark Mode Toggle with localStorage =====
-const toggleBtn = document.getElementById("toggle-theme");
+// ====== DOM Elements ======
 const body = document.body;
+const toggleThemeBtn = document.getElementById('toggle-theme');
+const timerDisplay = document.querySelector('.timer-display');
+const startBtn = document.getElementById('start-timer');
+const resetBtn = document.getElementById('reset-timer');
+const focusInput = document.getElementById('focus-time');
+const breakInput = document.getElementById('break-time');
+const logDistractionBtn = document.getElementById('log-distraction');
+const distractionReasonInput = document.getElementById('distraction-reason');
+const focusTotalP = document.getElementById('focus-total');
+const distractionCountP = document.getElementById('distraction-count');
+const distractionLogUl = document.getElementById('distraction-log');
 
-function setDarkMode(isDark) {
-    if (isDark) {
-        body.classList.add("dark-mode");
-        localStorage.setItem("darkMode", "true");
-    } else {
-        body.classList.remove("dark-mode");
-        localStorage.setItem("darkMode", "false");
-    }
+// ====== State ======
+let timer = null;
+let isRunning = false;
+let isFocusTime = true;
+let timeLeft = 0; // in seconds
+let totalFocusSeconds = 0;
+
+let distractions = JSON.parse(localStorage.getItem('distractions')) || [];
+let darkMode = localStorage.getItem('darkMode') === 'true';
+
+// ====== Initialize ======
+function initialize() {
+    applyDarkMode(darkMode);
+    updateTimerDisplay(getFocusTimeSeconds());
+    updateStats();
+    renderDistractions();
+}
+initialize();
+
+// ====== Helpers ======
+function getFocusTimeSeconds() {
+    const val = parseInt(focusInput.value);
+    return isNaN(val) || val <= 0 ? 25 * 60 : val * 60;
 }
 
-// Initialize dark mode from localStorage
-const savedDarkMode = localStorage.getItem("darkMode");
-setDarkMode(savedDarkMode === "true");
-
-// Toggle dark mode button event
-toggleBtn.addEventListener("click", () => {
-    setDarkMode(!body.classList.contains("dark-mode"));
-});
-
-// ===== Timer and other app code here (if any) =====
-// You can add your timer functionality here.
-
-// ===== Distraction Logging =====
-const logBtn = document.getElementById("log-distraction");
-const reasonInput = document.getElementById("distraction-reason");
-const distractionCountDisplay = document.getElementById("distraction-count");
-const distractionLogList = document.getElementById("distraction-log");
-
-const exportJsonBtn = document.getElementById("export-json");
-const exportTxtBtn = document.getElementById("export-txt");
-
-// Helper to get YYYY-MM-DD string
-function getTodayDate() {
-    return new Date().toISOString().split("T")[0];
+function getBreakTimeSeconds() {
+    const val = parseInt(breakInput.value);
+    return isNaN(val) || val <= 0 ? 5 * 60 : val * 60;
 }
 
-// Load distractions & check if day changed
-let distractions = JSON.parse(localStorage.getItem("distractions")) || [];
-const savedDate = localStorage.getItem("distractionsDate");
-const today = getTodayDate();
-
-if (savedDate !== today) {
-    distractions = [];
-    localStorage.setItem("distractionsDate", today);
-    localStorage.setItem("distractions", JSON.stringify(distractions));
+function secondsToMMSS(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
 }
 
-// Save distractions and date
+function updateTimerDisplay(seconds) {
+    timerDisplay.textContent = secondsToMMSS(seconds);
+}
+
+function updateStats() {
+    focusTotalP.textContent = `Total Focus Time: ${Math.floor(totalFocusSeconds / 60)} mins`;
+    distractionCountP.textContent = `Distractions: ${distractions.length}`;
+}
+
 function saveDistractions() {
-    localStorage.setItem("distractions", JSON.stringify(distractions));
-    localStorage.setItem("distractionsDate", getTodayDate());
+    localStorage.setItem('distractions', JSON.stringify(distractions));
 }
 
-// Render distraction list with delete buttons
 function renderDistractions() {
-    distractionLogList.innerHTML = "";
-    distractionCountDisplay.textContent = `Distractions: ${distractions.length}`;
+    distractionLogUl.innerHTML = '';
+    if (distractions.length === 0) {
+        distractionLogUl.innerHTML = '<li>No distractions logged yet.</li>';
+        return;
+    }
+    distractions.forEach(({ reason, timestamp }, index) => {
+        const li = document.createElement('li');
+        li.textContent = `[${new Date(timestamp).toLocaleTimeString()}] ${reason || 'No reason given'}`;
 
-    distractions.forEach((entry, index) => {
-        const li = document.createElement("li");
-        li.textContent = `${index + 1}. ${entry.reason} — ${entry.time} `;
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "Delete";
-        deleteBtn.style.marginLeft = "1rem";
-        deleteBtn.style.padding = "0.2rem 0.5rem";
-        deleteBtn.style.fontSize = "0.8rem";
-        deleteBtn.style.cursor = "pointer";
-        deleteBtn.style.borderRadius = "4px";
-        deleteBtn.style.border = "none";
-        deleteBtn.style.backgroundColor = "#e74c3c";
-        deleteBtn.style.color = "white";
-
-        deleteBtn.addEventListener("click", () => {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✕';
+        delBtn.title = 'Remove distraction';
+        delBtn.addEventListener('click', () => {
             distractions.splice(index, 1);
             saveDistractions();
+            updateStats();
             renderDistractions();
         });
 
-        li.appendChild(deleteBtn);
-        distractionLogList.appendChild(li);
+        li.appendChild(delBtn);
+        distractionLogUl.appendChild(li);
     });
 }
 
-// Log a new distraction
-function logDistraction() {
-    const reason = reasonInput.value.trim();
-    if (reason === "") return;
+// ====== Timer Logic ======
+function startTimer() {
+    if (isRunning) return;
 
-    const timestamp = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    isRunning = true;
+    startBtn.disabled = true;
 
-    distractions.push({ reason, time: timestamp });
+    timer = setInterval(() => {
+        timeLeft--;
+
+        if (isFocusTime) {
+            totalFocusSeconds++;
+            updateStats();
+        }
+
+        updateTimerDisplay(timeLeft);
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            isRunning = false;
+            startBtn.disabled = false;
+
+            // Toggle focus/break
+            isFocusTime = !isFocusTime;
+            timeLeft = isFocusTime ? getFocusTimeSeconds() : getBreakTimeSeconds();
+
+            alert(isFocusTime ? 'Break is over! Time to focus.' : 'Focus session over! Time for a break.');
+
+            updateTimerDisplay(timeLeft);
+        }
+    }, 1000);
+}
+
+function resetTimer() {
+    clearInterval(timer);
+    isRunning = false;
+    startBtn.disabled = false;
+    isFocusTime = true;
+    timeLeft = getFocusTimeSeconds();
+    updateTimerDisplay(timeLeft);
+}
+
+// ====== Dark Mode Logic ======
+function applyDarkMode(enabled) {
+    if (enabled) {
+        body.classList.add('dark-mode');
+        toggleThemeBtn.textContent = '☀️ Light Mode';
+    } else {
+        body.classList.remove('dark-mode');
+        toggleThemeBtn.textContent = '🌙 Dark Mode';
+    }
+    localStorage.setItem('darkMode', enabled);
+}
+
+// ====== Event Listeners ======
+
+// Dark mode toggle
+toggleThemeBtn.addEventListener('click', () => {
+    darkMode = !darkMode;
+    applyDarkMode(darkMode);
+});
+
+// Timer controls
+startBtn.addEventListener('click', () => {
+    if (!isRunning) {
+        if (timeLeft <= 0) {
+            timeLeft = isFocusTime ? getFocusTimeSeconds() : getBreakTimeSeconds();
+        }
+        startTimer();
+    }
+});
+
+resetBtn.addEventListener('click', () => {
+    resetTimer();
+});
+
+// Inputs reset timer on change
+focusInput.addEventListener('change', () => {
+    if (!isRunning) {
+        timeLeft = getFocusTimeSeconds();
+        updateTimerDisplay(timeLeft);
+    }
+});
+breakInput.addEventListener('change', () => {
+    if (!isRunning && !isFocusTime) {
+        timeLeft = getBreakTimeSeconds();
+        updateTimerDisplay(timeLeft);
+    }
+});
+
+// Log distraction
+logDistractionBtn.addEventListener('click', () => {
+    const reason = distractionReasonInput.value.trim();
+    distractions.push({ reason, timestamp: Date.now() });
     saveDistractions();
+    updateStats();
     renderDistractions();
+    distractionReasonInput.value = '';
+});
 
-    reasonInput.value = "";
-}
-
-logBtn.addEventListener("click", logDistraction);
-
-// Export functions
-function exportToJson() {
-    const dataStr = JSON.stringify(distractions, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `distractions-${getTodayDate()}.json`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-function exportToTxt() {
-    let txtContent = distractions
-        .map((d, i) => `${i + 1}. ${d.reason} — ${d.time}`)
-        .join("\n");
-
-    const blob = new Blob([txtContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `distractions-${getTodayDate()}.txt`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-exportJsonBtn.addEventListener("click", exportToJson);
-exportTxtBtn.addEventListener("click", exportToTxt);
-
-// Initial render on page load
-renderDistractions();
+// Prevent form submit on Enter in distraction input
+distractionReasonInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        logDistractionBtn.click();
+    }
+});

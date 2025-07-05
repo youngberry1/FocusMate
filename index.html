@@ -4,29 +4,56 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Distraction Logger App</title>
-    <link rel="stylesheet" href="./style.css" />
+    <title>FocusMate</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
+    <header>
+        <h1>FocusMate</h1>
+        <button id="toggle-theme" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+    </header>
 
-    <h1>Distraction Logger App</h1>
+    <main id="main-section">
+        <!-- Timer Display -->
+        <div class="timer-display" id="timer-display">25:00</div>
 
-    <button id="toggle-theme">Toggle Dark Mode</button>
+        <!-- Timer Controls -->
+        <div class="controls">
+            <button id="start-timer">Start</button>
+            <button id="reset-timer">Reset</button>
+        </div>
 
-    <section class="distraction-section" style="margin-top: 2rem;">
-        <button id="log-distraction">Got Distracted</button>
-        <input id="distraction-reason" type="text" placeholder="Why?" autocomplete="off" />
-        <button id="export-json">Export JSON</button>
-        <button id="export-txt">Export TXT</button>
-    </section>
+        <!-- Session Configuration -->
+        <div class="session-config">
+            <label for="focus-time">Focus (min):</label>
+            <input id="focus-time" type="number" min="1" max="180" value="25" />
 
-    <section id="stats" style="margin-top: 2rem;">
-        <h2>Today's Stats</h2>
-        <p id="focus-total">Total Focus Time: 0 mins</p>
-        <p id="distraction-count">Distractions: 0</p>
-        <ul id="distraction-log"></ul>
-    </section>
+            <label for="break-time">Break (min):</label>
+            <input id="break-time" type="number" min="1" max="60" value="5" />
+        </div>
+
+        <!-- Distraction Logger -->
+        <div class="distraction-logger">
+            <input id="distraction-reason" type="text" placeholder="Why did you get distracted?"
+                aria-label="Distraction reason" />
+            <button id="log-distraction">Log Distraction</button>
+        </div>
+
+        <!-- Stats Section -->
+        <section id="stats">
+            <h2>Today's Stats</h2>
+            <p id="focus-total">Total Focus Time: 0 mins</p>
+            <p id="distraction-count">Distractions: 0</p>
+            <ul id="distraction-log"></ul>
+        </section>
+
+        <!-- Export Buttons -->
+        <section id="export-section">
+            <button id="export-json-button">Export JSON</button>
+            <button id="export-txt-button">Export TXT</button>
+        </section>
+    </main>
 
     <script src="script.js"></script>
 </body>
